@@ -28,10 +28,6 @@ module "route53" {
   alb_zone_id  = module.alb.zone_id
 }
 
-module "iam" {
-  source = "./modules/iam"
-}
-
 module "ecs" {
   source                      = "./modules/ecs"
   project_name                = var.project_name
@@ -43,4 +39,18 @@ module "ecs" {
   container_image             = var.container_image
   ecs_task_execution_role_arn = module.iam.ecs_task_execution_role_arn
   aws_region                  = var.aws_region
+  db_secret_arn               = module.rds.db_secret_arn
+}
+
+module "rds" {
+  source                 = "./modules/rds"
+  project_name           = var.project_name
+  vpc_id                 = module.vpc.vpc_id
+  private_subnet_ids     = module.vpc.private_subnet_ids
+  ecs_security_group_id  = module.ecs.security_group_id
+}
+
+module "iam" {
+  source        = "./modules/iam"
+  db_secret_arn = module.rds.db_secret_arn
 }

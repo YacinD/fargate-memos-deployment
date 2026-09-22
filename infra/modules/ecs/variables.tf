@@ -63,3 +63,7 @@ variable "desired_count" {
 variable "aws_region" {
   type = string
 }
+
+variable "db_secret_arn" {
+  type = string
+}

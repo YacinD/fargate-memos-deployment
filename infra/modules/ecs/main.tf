@@ -60,6 +60,12 @@ resource "aws_ecs_task_definition" "this" {
           protocol      = "tcp"
         }
       ]
+      environment = [
+        { name = "MEMOS_DRIVER", value = "postgres" }
+      ]
+      secrets = [
+        { name = "MEMOS_DSN", valueFrom = var.db_secret_arn }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {

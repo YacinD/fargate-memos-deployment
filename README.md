@@ -14,7 +14,7 @@ The application is secured with **HTTPS** through ACM and exposed through the cu
 
 ## 🏗️ Architecture Overview
 
-![Architecture diagram placeholder](assets/architecture-diagram.png)
+![Architecture diagram placeholder](assets/arch.png)
 
 **Flow:**
 

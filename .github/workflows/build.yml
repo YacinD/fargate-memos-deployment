@@ -1,13 +1,11 @@
-name: Build, Push, and Deploy Application
+name: Terraform Deploy
 
 on:
   push:
     branches: [main]
     paths:
-      - 'app/**'
-      - 'Dockerfile'
-      - '.dockerignore'
-      - '.github/workflows/build.yml'
+      - 'infra/**'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 permissions:
@@ -15,41 +13,25 @@ permissions:
   contents: read
 
 concurrency:
-  group: app-deploy-production
+  group: terraform-production
   cancel-in-progress: false
 
 env:
   AWS_REGION: eu-west-2
-  ECR_REPOSITORY: ecs-memos
-  ECS_CLUSTER: memos-cluster
-  ECS_SERVICE: memos-task-service-luk8cbkx
-  CONTAINER_NAME: memos
 
 jobs:
-  build-scan-push-deploy:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     environment: production
-
+    defaults:
+      run:
+        working-directory: infra
+    outputs:
+      plan_exitcode: ${{ steps.plan.outputs.exitcode }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Build Docker image
-        run: docker build -t local-build:${{ github.sha }} .
-
-      # No automated test suite currently exists for this app.
-      # Placeholder kept explicit rather than silently skipped.
-      - name: Test
-        run: echo "No test suite configured yet — placeholder step"
-
-      - name: Vulnerability scan (Trivy)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: local-build:${{ github.sha }}
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: 1
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -57,42 +39,91 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Tag and push image to ECR
-        id: push
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker tag local-build:${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Download current ECS task definition
-        run: |
-          aws ecs describe-task-definition \
-            --task-definition memos-task \
-            --query taskDefinition \
-            > task-definition.json
-
-      - name: Render new task definition with updated image
-        id: render
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
-          task-definition: task-definition.json
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.push.outputs.image }}
+          terraform_version: "1.10.0"
 
-      - name: Deploy new task definition to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Security scan (Checkov)
+        uses: bridgecrewio/checkov-action@master
         with:
-          task-definition: ${{ steps.render.outputs.task-definition }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          service: ${{ env.ECS_SERVICE }}
-          wait-for-service-stability: true
+          directory: infra
+          framework: terraform
+          quiet: true
+          soft_fail: false
+
+      - name: Terraform plan
+        id: plan
+        run: |
+          terraform plan -out=tfplan -detailed-exitcode || echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+          terraform show -no-color tfplan > plan_output.txt
+
+      - name: Publish plan to job summary
+        run: |
+          echo "### Terraform Plan" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          head -c 60000 plan_output.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: |
+            infra/tfplan
+            infra/plan_output.txt
+          retention-days: 14
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.0"
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+          path: infra
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve tfplan
+
+      - name: Wait for ECS service to stabilise
+        run: |
+          aws ecs wait services-stable \
+            --cluster memos-cluster \
+            --services memos-task-service-luk8cbkx \
+            --region ${{ env.AWS_REGION }}
 
       - name: Application health check (with retries)
         run: |
@@ -107,3 +138,8 @@ jobs:
           done
           echo "Health check failed after retries"
           exit 1
+
+      - name: Job summary
+        run: |
+          echo "### Deployment complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://ecsv1.online is live and healthy" >> "$GITHUB_STEP_SUMMARY"

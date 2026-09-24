@@ -6,13 +6,13 @@ The application is secured with **HTTPS** through ACM and exposed through the cu
 
 ---
 
-## 📸 Live Application
+## Live Application
 
-🌐 **Live Domain:** [ecsv1.online](https://ecsv1.online/) `⚠️ Currently disabled/discontinued`
+**Live Domain:** [ecsv1.online](https://ecsv1.online/) `⚠️ Currently disabled/discontinued`
 
 ![Demo](assets/demo.gif)
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ![Architecture diagram placeholder](assets/Arch.jpeg)
 

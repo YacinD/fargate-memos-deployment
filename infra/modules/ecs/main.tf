@@ -34,10 +34,10 @@ resource "aws_security_group" "ecs" {
 resource "aws_ecs_task_definition" "this" {
   family                   = "${var.project_name}-task"
   requires_compatibilities = ["FARGATE"]
-  network_mode              = "awsvpc"
-  cpu                       = var.task_cpu
-  memory                    = var.task_memory
-  execution_role_arn        = var.ecs_task_execution_role_arn
+  network_mode             = "awsvpc"
+  cpu                      = var.task_cpu
+  memory                   = var.task_memory
+  execution_role_arn       = var.ecs_task_execution_role_arn
 
   runtime_platform {
     operating_system_family = "LINUX"
@@ -93,7 +93,7 @@ resource "aws_ecs_service" "this" {
 
   load_balancer {
     target_group_arn = var.target_group_arn
-    container_name    = var.container_name
-    container_port    = var.container_port
+    container_name   = var.container_name
+    container_port   = var.container_port
   }
 }

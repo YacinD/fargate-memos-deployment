@@ -15,5 +15,5 @@ variable "ecr_repository_name" {
 
 variable "github_repo" {
   type    = string
-  default = "YacinD/fargate-memos-deployment"
+  default = "YacinD/Fargate-Memos-Deployment"
 }

@@ -1,4 +1,4 @@
-name: Build and Push
+name: Build and Push Image
 
 on:
   push:
@@ -13,9 +13,14 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: build-image
+  cancel-in-progress: false
+
 env:
   AWS_REGION: eu-west-2
-  ECR_REPOSITORY: ecs-memos
+  ECR_REPO: ecs-memos
+  IMAGE_TAG: v1
 
 jobs:
   build:
@@ -24,25 +29,26 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - uses: aws-actions/amazon-ecr-login@v2
-        id: login
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push
-        env:
-          IMAGE: ${{ steps.login.outputs.registry }}/${{ env.ECR_REPOSITORY }}
         run: |
-          docker build \
-            --build-arg VERSION=${{ github.ref_name }} \
-            --build-arg COMMIT=${{ github.sha }} \
-            -t $IMAGE:${{ github.sha }} \
-            -t $IMAGE:latest \
-            .
+          REPO=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}
+          docker build -f Dockerfile \
+            -t "$REPO:${{ env.IMAGE_TAG }}" \
+            -t "$REPO:${{ github.sha }}" .
+          docker push "$REPO:${{ env.IMAGE_TAG }}"
+          docker push "$REPO:${{ github.sha }}"
 
-          docker push $IMAGE:${{ github.sha }}
-          docker push $IMAGE:latest
+      - run: |
+          echo "### Image pushed" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }} and :${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"

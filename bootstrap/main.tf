@@ -13,11 +13,8 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "tf_state" {
-  bucket = var.state_bucket_name
-
-  lifecycle {
-    prevent_destroy = true
-  }
+  bucket        = var.state_bucket_name
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_versioning" "tf_state" {
@@ -53,16 +50,12 @@ resource "aws_dynamodb_table" "tf_lock" {
     name = "LockID"
     type = "S"
   }
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_ecr_repository" "memos" {
   name                 = var.ecr_repository_name
   image_tag_mutability = "MUTABLE"
-  force_delete         = false
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -70,10 +63,6 @@ resource "aws_ecr_repository" "memos" {
 
   encryption_configuration {
     encryption_type = "AES256"
-  }
-
-  lifecycle {
-    prevent_destroy = true
   }
 }
 

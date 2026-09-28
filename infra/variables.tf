@@ -23,7 +23,7 @@ variable "domain_name" {
   default = "ecsv1.online"
 }
 
-variable "container_image" {
+variable "state_bucket_name" {
   type    = string
-  default = "956076205260.dkr.ecr.eu-west-2.amazonaws.com/ecs-memos:v1"
+  default = "ecsv1-terraform-state"
 }

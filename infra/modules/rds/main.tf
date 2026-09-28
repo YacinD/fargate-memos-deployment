@@ -55,10 +55,11 @@ resource "aws_db_instance" "this" {
 }
 
 resource "aws_secretsmanager_secret" "db_dsn" {
-  name = "${var.project_name}-db-dsn"
+  name                    = "${var.project_name}-db-dsn"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "db_dsn" {
   secret_id     = aws_secretsmanager_secret.db_dsn.id
-  secret_string = "postgres://${var.db_username}:${random_password.db.result}@${aws_db_instance.this.endpoint}/${var.db_name}?sslmode=disable"
+  secret_string = "postgres://${var.db_username}:${random_password.db.result}@${aws_db_instance.this.endpoint}/${var.db_name}?sslmode=require"
 }

@@ -4,8 +4,9 @@ module "vpc" {
 }
 
 module "ecr" {
-  source          = "./modules/ecr"
-  repository_name = "ecs-memos"
+  source = "./modules/ecr"
+
+  repository_name = var.ecr_repository_name
 }
 
 module "acm" {
@@ -36,7 +37,7 @@ module "ecs" {
   private_subnet_ids          = module.vpc.private_subnet_ids
   alb_security_group_id       = module.alb.security_group_id
   target_group_arn            = module.alb.target_group_arn
-  container_image             = "${module.ecr.repository_url}:v1"
+  container_image             = var.container_image
   ecs_task_execution_role_arn = module.iam.ecs_task_execution_role_arn
   aws_region                  = var.aws_region
   db_secret_arn               = module.rds.db_secret_arn

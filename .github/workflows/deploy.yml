@@ -44,6 +44,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-skip-session-tagging: true
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -70,7 +71,6 @@ jobs:
           set -e
           echo "exitcode=$EXITCODE" >> "$GITHUB_OUTPUT"
           terraform show -no-color tfplan > plan_output.txt
-          # 0 = no changes, 2 = changes (both fine), 1 = real error
           if [ "$EXITCODE" -eq 1 ]; then exit 1; fi
 
       - if: always()
@@ -107,6 +107,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+          role-skip-session-tagging: true
 
       - uses: hashicorp/setup-terraform@v3
         with:

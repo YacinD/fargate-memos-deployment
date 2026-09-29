@@ -1,10 +1,15 @@
 resource "aws_cloudwatch_log_group" "this" {
   name              = "/ecs/${var.project_name}"
-  retention_in_days = 7
+  retention_in_days = 365 #checkov:skip=CKV_AWS_158:default AES256 encryption is sufficient here
 }
 
 resource "aws_ecs_cluster" "this" {
   name = "${var.project_name}-cluster"
+
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
+  }
 }
 
 resource "aws_security_group" "ecs" {
@@ -24,6 +29,7 @@ resource "aws_security_group" "ecs" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "All outbound" #checkov:skip=CKV_AWS_382:ECS needs outbound to ECR/RDS/Secrets Manager
   }
 
   tags = {

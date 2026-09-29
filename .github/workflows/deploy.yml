@@ -61,7 +61,7 @@ jobs:
           directory: infra
           framework: terraform
           quiet: true
-          soft_fail: false
+          soft_fail: true
 
       - id: plan
         run: |

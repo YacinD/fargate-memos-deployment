@@ -91,9 +91,9 @@ data "aws_iam_policy_document" "github_assume_role" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repo}:ref:refs/heads/main",
-        "repo:${var.github_repo}:environment:production",
-        "repo:${var.github_repo}:*"
+        "repo:YacinD*/fargate-memos-deployment*:ref:refs/heads/main",
+        "repo:YacinD*/fargate-memos-deployment*:environment:production",
+        "repo:YacinD*/fargate-memos-deployment*:*"
       ]
     }
   }
@@ -104,7 +104,123 @@ resource "aws_iam_role" "github_actions" {
   assume_role_policy = data.aws_iam_policy_document.github_assume_role.json
 }
 
-resource "aws_iam_role_policy_attachment" "github_actions_admin" {
+data "aws_iam_policy_document" "github_actions_deploy" {
+  statement {
+    sid    = "TerraformState"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:ListBucket",
+    ]
+    resources = [
+      aws_s3_bucket.tf_state.arn,
+      "${aws_s3_bucket.tf_state.arn}/*",
+    ]
+  }
+
+  statement {
+    sid       = "StateLock"
+    effect    = "Allow"
+    actions   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem"]
+    resources = [aws_dynamodb_table.tf_lock.arn]
+  }
+
+  statement {
+    sid    = "ECR"
+    effect = "Allow"
+    actions = [
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage",
+      "ecr:PutImage",
+      "ecr:InitiateLayerUpload",
+      "ecr:UploadLayerPart",
+      "ecr:CompleteLayerUpload",
+      "ecr:DescribeRepositories",
+      "ecr:DescribeImages",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "ECS"
+    effect    = "Allow"
+    actions   = ["ecs:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "PassRole"
+    effect = "Allow"
+    actions = [
+      "iam:PassRole",
+      "iam:GetRole",
+      "iam:CreateRole",
+      "iam:DeleteRole",
+      "iam:PutRolePolicy",
+      "iam:DeleteRolePolicy",
+      "iam:AttachRolePolicy",
+      "iam:DetachRolePolicy",
+      "iam:TagRole",
+      "iam:ListRolePolicies",
+      "iam:ListAttachedRolePolicies",
+      "iam:GetRolePolicy",
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "Networking"
+    effect    = "Allow"
+    actions   = ["ec2:*", "elasticloadbalancing:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "ACM"
+    effect    = "Allow"
+    actions   = ["acm:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "Route53"
+    effect    = "Allow"
+    actions   = ["route53:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "RDS"
+    effect    = "Allow"
+    actions   = ["rds:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "SecretsManager"
+    effect    = "Allow"
+    actions   = ["secretsmanager:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "CloudWatchLogs"
+    effect    = "Allow"
+    actions   = ["logs:*"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "github_actions_deploy" {
+  name   = "github-actions-deploy-policy"
+  policy = data.aws_iam_policy_document.github_actions_deploy.json
+}
+
+resource "aws_iam_role_policy_attachment" "github_actions_deploy" {
   role       = aws_iam_role.github_actions.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  policy_arn = aws_iam_policy.github_actions_deploy.arn
 }

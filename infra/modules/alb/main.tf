@@ -7,7 +7,7 @@ resource "aws_security_group" "alb" {
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP"
+    description = "HTTP" #checkov:skip=CKV_AWS_260:redirects to HTTPS, intentional public entry
   }
 
   ingress {
@@ -23,6 +23,7 @@ resource "aws_security_group" "alb" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+    description = "All outbound" #checkov:skip=CKV_AWS_382:standard outbound for a public ALB
   }
 
   tags = {
@@ -31,11 +32,13 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_lb" "this" {
-  name               = "${var.project_name}-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = var.public_subnet_ids
+  name                       = "${var.project_name}-alb"
+  internal                   = false
+  load_balancer_type         = "application"
+  security_groups            = [aws_security_group.alb.id]
+  subnets                    = var.public_subnet_ids
+  drop_invalid_header_fields = true
+  enable_deletion_protection = false #checkov:skip=CKV_AWS_150:destroy/apply must work cleanly for this project
 
   tags = {
     Name = "${var.project_name}-alb"

@@ -141,6 +141,7 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "ecr:CompleteLayerUpload",
       "ecr:DescribeRepositories",
       "ecr:DescribeImages",
+      "ecr:ListTagsForResource",
     ]
     resources = ["*"]
   }

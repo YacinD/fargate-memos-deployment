@@ -30,7 +30,7 @@ RUN go mod download
 
 COPY app/memos/ ./
 
-COPY --from=frontend /frontend/dist ./web/dist
+COPY --from=frontend /server/router/frontend/dist ./web/dist
 
 RUN CGO_ENABLED=1 go build \
     -o memos \

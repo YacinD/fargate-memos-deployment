@@ -87,7 +87,7 @@ jobs:
           path: |
             infra/tfplan
             infra/plan_output.txt
-          retention-days: 14
+          retention-days: 14s
 
   apply:
     needs: plan

@@ -27,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,9 +45,13 @@ jobs:
       - name: Build and push
         run: |
           REPO=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO }}
-          docker build -f Dockerfile \
+
+          docker build \
+            -f Dockerfile \
             -t "$REPO:${{ env.IMAGE_TAG }}" \
-            -t "$REPO:${{ github.sha }}" .
+            -t "$REPO:${{ github.sha }}" \
+            .
+
           docker push "$REPO:${{ env.IMAGE_TAG }}"
           docker push "$REPO:${{ github.sha }}"
 

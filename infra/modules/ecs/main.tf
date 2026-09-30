@@ -59,6 +59,7 @@ resource "aws_ecs_task_definition" "this" {
       name      = var.container_name
       image     = var.container_image
       essential = true
+
       portMappings = [
         {
           containerPort = var.container_port
@@ -66,14 +67,28 @@ resource "aws_ecs_task_definition" "this" {
           protocol      = "tcp"
         }
       ]
+
       environment = [
-        { name = "MEMOS_DRIVER", value = "postgres" }
+        {
+          name  = "MEMOS_DRIVER"
+          value = "postgres"
+        },
+        {
+          name  = "MEMOS_PORT"
+          value = tostring(var.container_port)
+        }
       ]
+
       secrets = [
-        { name = "MEMOS_DSN", valueFrom = var.db_secret_arn }
+        {
+          name      = "MEMOS_DSN"
+          valueFrom = var.db_secret_arn
+        }
       ]
+
       logConfiguration = {
         logDriver = "awslogs"
+
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.this.name
           "awslogs-region"        = var.aws_region

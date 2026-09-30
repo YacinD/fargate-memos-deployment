@@ -14,7 +14,7 @@ The application is secured with **HTTPS** through ACM and exposed through the cu
 
 ## Architecture Overview
 
-![Architecture diagram placeholder](assets/Arch.jpeg)
+![Architecture diagram placeholder](assets/aws_ecs_fargate_architecture.png)
 
 **Flow:**
 
